@@ -759,19 +759,26 @@
                               title={`${ev.person}: ${ev.type} ${ev.time} ${ev.title}`}
                             >
                               {filterPerson === '全員' ? (
-                                <div className="flex items-center gap-0.5 w-full justify-start sm:justify-center overflow-hidden px-0.5">
-                                  {(() => {
-                                    const memInfo = getMemberInfo(ev.person);
-                                    const palette = PALETTES[memInfo.colorIndex % PALETTES.length] || PALETTES[7];
-                                    return (
-                                      <span className={`${palette.iconBg} text-white text-[8px] sm:text-[9px] font-bold px-0.5 sm:px-1 rounded-sm shrink-0 leading-none py-0.5`}>
-                                        {memInfo.name.charAt(0)}
-                                      </span>
-                                    );
-                                  })()}
-                                  <span className={`font-bold text-[8px] sm:text-[10px] truncate leading-none py-0.5 ${ev.type === '休み' ? 'text-red-600' : 'text-gray-800'}`}>
-                                    {ev.type}
-                                  </span>
+                                <div className="flex flex-col w-full items-start sm:items-center px-0.5 pb-0.5">
+                                  <div className="flex items-center gap-0.5 w-full justify-start sm:justify-center overflow-hidden">
+                                    {(() => {
+                                      const memInfo = getMemberInfo(ev.person);
+                                      const palette = PALETTES[memInfo.colorIndex % PALETTES.length] || PALETTES[7];
+                                      return (
+                                        <span className={`${palette.iconBg} text-white text-[8px] sm:text-[9px] font-bold px-0.5 sm:px-1 rounded-sm shrink-0 leading-none py-0.5 mt-0.5`}>
+                                          {memInfo.name.charAt(0)}
+                                        </span>
+                                      );
+                                    })()}
+                                    <span className={`font-bold text-[8px] sm:text-[10px] truncate leading-none py-0.5 mt-0.5 ${ev.type === '休み' ? 'text-red-600' : 'text-gray-800'}`}>
+                                      {ev.type}
+                                    </span>
+                                  </div>
+                                  {ev.time && ev.type !== '休み' && (
+                                    <span className="font-bold text-[8px] sm:text-[10px] text-black truncate leading-none mt-0.5 w-full text-left sm:text-center">
+                                      {ev.time}
+                                    </span>
+                                  )}
                                 </div>
                               ) : (
                                 <div className="flex flex-col w-full items-start sm:items-center px-0.5">
@@ -786,18 +793,20 @@
                                         </span>
                                       );
                                     })()}
-                                    <span className="font-bold text-[8px] sm:text-[10px] text-gray-800 truncate leading-none">
+                                    <span className={`font-bold text-[8px] sm:text-[10px] truncate leading-none ${ev.type === '休み' ? 'text-red-600' : 'text-gray-800'}`}>
                                       {ev.type}
                                     </span>
                                   </div>
 
                                   {/* 2段目: 時間 */}
-                                  <span className="font-bold text-[8px] sm:text-[11px] text-black truncate leading-none mt-0.5 sm:mt-1 w-full text-left sm:text-center">
-                                    {ev.time}
-                                  </span>
+                                  {ev.time && ev.type !== '休み' && (
+                                    <span className="font-bold text-[8px] sm:text-[11px] text-black truncate leading-none mt-0.5 sm:mt-1 w-full text-left sm:text-center">
+                                      {ev.time}
+                                    </span>
+                                  )}
 
                                   {/* 3段目: 現場名 */}
-                                  <span className="text-[8px] sm:text-xs font-bold text-gray-800 break-words sm:truncate leading-tight mt-0.5 sm:mt-1 w-full text-left sm:text-center line-clamp-2 sm:line-clamp-none">
+                                  <span className={`text-[8px] sm:text-xs font-bold break-words sm:truncate leading-tight mt-0.5 sm:mt-1 w-full text-left sm:text-center line-clamp-2 sm:line-clamp-none ${ev.type === '休み' || ev.title === '休み' ? 'text-red-600' : 'text-gray-800'}`}>
                                     {ev.title}
                                   </span>
 
