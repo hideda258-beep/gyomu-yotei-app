@@ -149,6 +149,19 @@
       const [lastUpdated, setLastUpdated] = useState(null);
       const [highlightDay, setHighlightDay] = useState(null);
 
+      // --- 追加: トップへ戻るボタンの表示制御 ---
+      const [showTopBtn, setShowTopBtn] = useState(false);
+
+      useEffect(() => {
+        const handleScroll = () => {
+          // 200px以上下にスクロールしたらボタンを表示
+          setShowTopBtn(window.scrollY > 200);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+      }, []);
+      // ------------------------------------------
+
       // 管理者（社長）パスワード
       const ADMIN_PASSWORD = '0721';
 
@@ -742,7 +755,7 @@
                     
                     const bLeftClass = colIndex === 0 ? 'border-l-2 border-slate-700' : '';
                     const bRightClass = 'border-r-2 border-slate-700';
-                    const bBottomClass = 'border-b border-slate-700';
+                    const bBottomClass = 'border-b-2 border-slate-700';
 
                     if (day === null) {
                       return <div key={`empty-${index}`} className={`min-h-[80px] sm:min-h-[120px] bg-gray-50 ${bLeftClass} ${bRightClass} ${bBottomClass}`}></div>;
@@ -894,7 +907,7 @@
                     }
 
                     if (dayEvents.length === 0) {
-                      const bBottomClass = day === daysInMonth ? '' : 'border-b border-slate-700';
+                      const bBottomClass = day === daysInMonth ? '' : 'border-b-2 border-slate-700';
                       return (
                         <tr key={day} id={`row-day-${day}`} className={baseTrClass}>
                           <td className={`relative py-1.5 sm:py-3 px-0.5 sm:px-2 border-r-2 border-slate-700 ${bBottomClass} text-center font-bold ${dayColorClass} text-[11px] sm:text-base ${isTodayObj && highlightDay !== day ? 'bg-[#FFF9C4]' : ''}`}>
@@ -935,8 +948,8 @@
                     return dayEvents.map((event, index) => {
                       const isFirstRow = index === 0;
                       const isLastRow = index === dayEvents.length - 1;
-                      const bBottomClass = (day === daysInMonth && isLastRow) ? '' : 'border-b border-slate-700';
-                      const firstColBottomClass = day === daysInMonth ? '' : 'border-b border-slate-700';
+                      const bBottomClass = (day === daysInMonth && isLastRow) ? '' : 'border-b-2 border-slate-700';
+                      const firstColBottomClass = day === daysInMonth ? '' : 'border-b-2 border-slate-700';
 
                       return (
                       <tr key={event.id} id={isFirstRow ? `row-day-${day}` : undefined} className={baseTrClass}>
@@ -1432,6 +1445,17 @@
             </div>
           </div>
         )}
+
+        {/* トップへ戻るボタン */}
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className={`fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-40 bg-[#124285]/90 hover:bg-[#124285] text-white px-4 py-2 sm:px-5 sm:py-3 rounded-full shadow-lg backdrop-blur-sm font-bold text-xs sm:text-sm transition-all duration-300 ${
+            showTopBtn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
+          }`}
+          title="一番上へ戻る"
+        >
+          ↑ TOP
+        </button>
 
       </div>
       );
