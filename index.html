@@ -701,13 +701,18 @@
             {/* カレンダー本体 */}
             <div className="px-1 sm:px-4 pb-4 bg-white">
               <div className="w-full p-[2px]">
-                <div className="grid grid-cols-7 text-center border-t-2 border-l-2 border-r-2 border-slate-700 w-full relative">
+                {/* コンテナの外枠borderを外し、各セルに外枠を設定する */}
+                <div className="grid grid-cols-7 text-center w-full relative">
                   {['日', '月', '火', '水', '木', '金', '土'].map((dow, i) => {
                     const bgClass = i === 0 ? 'bg-red-50' : i === 6 ? 'bg-blue-50' : 'bg-indigo-50';
                     const textClass = i === 0 ? 'text-red-600' : i === 6 ? 'text-blue-600' : 'text-gray-700';
-                    const bRightClass = i === 6 ? '' : 'border-r-2 border-slate-700';
+                    
+                    const bTopClass = 'border-t-2 border-slate-700';
+                    const bLeftClass = i === 0 ? 'border-l-2 border-slate-700' : '';
+                    const bRightClass = 'border-r-2 border-slate-700';
+                    
                     return (
-                      <div key={dow} className={`py-2 text-sm font-bold border-b-2 border-slate-700 ${bRightClass} ${bgClass} ${textClass}`}>
+                      <div key={dow} className={`py-2 text-sm font-bold border-b-2 border-slate-700 ${bTopClass} ${bLeftClass} ${bRightClass} ${bgClass} ${textClass}`}>
                         {dow}
                       </div>
                     );
@@ -715,13 +720,13 @@
                   
                   {calendarDays.map((day, index) => {
                     const colIndex = index % 7;
-                    const rowIndex = Math.floor(index / 7);
                     
-                    const bRightClass = colIndex === 6 ? '' : 'border-r-2 border-slate-700';
+                    const bLeftClass = colIndex === 0 ? 'border-l-2 border-slate-700' : '';
+                    const bRightClass = 'border-r-2 border-slate-700';
                     const bBottomClass = 'border-b border-slate-700';
 
                     if (day === null) {
-                      return <div key={`empty-${index}`} className={`min-h-[80px] sm:min-h-[120px] bg-gray-50 ${bRightClass} ${bBottomClass}`}></div>;
+                      return <div key={`empty-${index}`} className={`min-h-[80px] sm:min-h-[120px] bg-gray-50 ${bLeftClass} ${bRightClass} ${bBottomClass}`}></div>;
                     }
                     
                     const dayEvents = getEventsForDay(day);
@@ -741,7 +746,7 @@
                             scrollToDate(day);
                           }
                         }}
-                        className={`min-w-0 min-h-[80px] sm:min-h-[120px] p-0.5 sm:p-1 flex flex-col items-center justify-start transition-colors relative ${bRightClass} ${bBottomClass}
+                        className={`min-w-0 min-h-[80px] sm:min-h-[120px] p-0.5 sm:p-1 flex flex-col items-center justify-start transition-colors relative ${bLeftClass} ${bRightClass} ${bBottomClass}
                           ${isToday ? 'bg-[#FFF9C4]' : 'bg-white'}
                           cursor-pointer hover:bg-gray-50
                         `}
