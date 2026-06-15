@@ -962,7 +962,7 @@
                         
                         <td className={`relative py-1.5 sm:py-3 px-0.5 sm:px-4 border-r-2 border-slate-700 ${bBottomClass} text-center font-bold break-words whitespace-pre-wrap text-[10px] sm:text-sm ${event.type === '休み' || event.title === '休み' ? 'text-red-600' : 'text-gray-800'}`}>
                           {isNextWeek && <div className="absolute -inset-[2px] pointer-events-none z-[20]" style={getWeekOverlayBorders(isNextWeek, isFirstRow, isLastRow, 'mid', isTopBorderDay, isBottomBorderDay)} />}
-                          <span className="relative z-10">{event.type === '休み' ? '' : event.title}</span>
+                          <span className="relative z-10">{event.title}</span>
                         </td>
                         
                         <td className={`relative py-1.5 sm:py-3 px-0.5 sm:px-2 ${isPresident ? 'border-r-2 border-slate-700' : ''} ${bBottomClass} text-center font-bold break-words whitespace-pre-wrap text-[10px] sm:text-sm text-gray-600`}>
