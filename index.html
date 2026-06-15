@@ -5,11 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>業務予定表アプリ</title>
   
-  <link rel="icon" type="image/png" href="./icon.png">
-  <link rel="apple-touch-icon" href="./icon.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-　<meta name="apple-mobile-web-app-title" content="ほくと測量">
-  
   <!-- Tailwind CSS (CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
   
@@ -99,7 +94,7 @@
       const allMembers = [...DEFAULT_MEMBERS, ...customMembers];
 
       const [currentDate, setCurrentDate] = useState(new Date());
-      const [currentTime, setCurrentTime] = useState(new Date()); // 追加: 現在時刻用
+      const [currentTime, setCurrentTime] = useState(new Date()); 
       
       const [showAddModal, setShowAddModal] = useState(false);
       const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -119,10 +114,33 @@
       const [newEventType, setNewEventType] = useState('現場');
       const [editingEventId, setEditingEventId] = useState(null);
 
-      const [filterPerson, setFilterPerson] = useState('全員');
+      // --- スマホブラウザに設定を記憶させるための処理 ---
+      const [filterPerson, setFilterPerson] = useState(() => {
+        return localStorage.getItem('gyomu_filterPerson') || '全員';
+      });
 
-      const [actingUser, setActingUser] = useState('閲覧者');
-      const [isAuthenticated, setIsAuthenticated] = useState(false);
+      const [actingUser, setActingUser] = useState(() => {
+        return localStorage.getItem('gyomu_actingUser') || '閲覧者';
+      });
+
+      const [isAuthenticated, setIsAuthenticated] = useState(() => {
+        return localStorage.getItem('gyomu_isAuthenticated') === 'true';
+      });
+
+      // 設定が変わるたびにスマホに記憶させる
+      useEffect(() => {
+        localStorage.setItem('gyomu_filterPerson', filterPerson);
+      }, [filterPerson]);
+
+      useEffect(() => {
+        localStorage.setItem('gyomu_actingUser', actingUser);
+      }, [actingUser]);
+
+      useEffect(() => {
+        localStorage.setItem('gyomu_isAuthenticated', isAuthenticated);
+      }, [isAuthenticated]);
+      // --------------------------------------------------
+
       const [showPasswordModal, setShowPasswordModal] = useState(false);
       const [inputPassword, setInputPassword] = useState('');
       const [passwordError, setPasswordError] = useState('');
@@ -169,7 +187,7 @@
       };
       const [referenceDate, setReferenceDate] = useState(getStartOfWeek(new Date()));
 
-      // 追加: 1秒ごとに現在時刻を更新するタイマー
+      // 1秒ごとに現在時刻を更新するタイマー
       useEffect(() => {
         const timer = setInterval(() => {
           setCurrentTime(new Date());
@@ -181,7 +199,6 @@
       useEffect(() => {
         const initAuth = async () => {
           try {
-            // Firebase設定が正しく行われている場合のみ匿名ログインを実行
             if(firebaseConfig.apiKey !== "YOUR_API_KEY") {
               await signInAnonymously(auth);
             } else {
@@ -562,7 +579,7 @@
               </div>
               
               <div className="flex flex-col items-center gap-1 mt-1 sm:mt-0">
-                {/* 追加: 現在時刻の表示 */}
+                {/* 現在時刻の表示 */}
                 <div className="flex items-center gap-1.5 sm:gap-2 text-xl sm:text-2xl font-bold text-white tracking-widest drop-shadow-sm mb-0.5">
                   <Clock className="w-5 h-5 sm:w-6 sm:h-6 opacity-90" />
                   <span className="tabular-nums font-mono">
@@ -847,10 +864,10 @@
                     <tr className="bg-[#F0F7FF]">
                       <th className="py-2 sm:py-3 px-0.5 sm:px-2 border-r-2 border-slate-700 border-b-2 border-slate-700 text-center w-8 sm:w-16 text-[10px] sm:text-sm font-bold text-[#1E5A99]">日付</th>
                       {filterPerson === '全員' && <th className="py-2 sm:py-3 px-0.5 sm:px-2 border-r-2 border-slate-700 border-b-2 border-slate-700 text-center w-9 sm:w-16 text-[10px] sm:text-sm font-bold text-[#1E5A99]">担当</th>}
-                      <th className="py-2 sm:py-3 px-1 sm:px-2 border-r-2 border-slate-700 border-b-2 border-slate-700 text-center w-11 sm:w-20 text-[10px] sm:text-sm font-bold text-[#1E5A99]">種別</th>
+                      <th className="py-2 sm:py-3 px-0.5 sm:px-2 border-r-2 border-slate-700 border-b-2 border-slate-700 text-center w-[40px] sm:w-20 text-[10px] sm:text-sm font-bold text-[#1E5A99]">種別</th>
                       <th className="py-2 sm:py-3 px-0.5 sm:px-2 border-r-2 border-slate-700 border-b-2 border-slate-700 text-center w-[56px] sm:w-24 text-[10px] sm:text-sm font-bold text-[#1E5A99]">時間</th>
                       <th className="py-2 sm:py-3 px-0.5 sm:px-4 border-r-2 border-slate-700 border-b-2 border-slate-700 text-center text-[10px] sm:text-sm font-bold text-[#1E5A99]">現場名・内容</th>
-                      <th className={`py-2 sm:py-3 px-0.5 sm:px-2 ${isPresident ? 'border-r-2 border-slate-700' : ''} border-b-2 border-slate-700 text-center w-[90px] sm:w-32 text-[10px] sm:text-sm font-bold text-[#1E5A99]`}>備考</th>
+                      <th className={`py-2 sm:py-3 px-1.5 sm:px-2 ${isPresident ? 'border-r-2 border-slate-700' : ''} border-b-2 border-slate-700 text-center w-[110px] sm:w-48 text-[10px] sm:text-sm font-bold text-[#1E5A99]`}>備考</th>
                       {isPresident && <th className="py-2 sm:py-3 px-0.5 sm:px-2 border-b-2 border-slate-700 text-center w-7 sm:w-12 text-[10px] sm:text-sm font-bold text-[#1E5A99]">編集</th>}
                     </tr>
                   </thead>
@@ -899,7 +916,7 @@
                           <td className={`relative py-1.5 sm:py-3 px-0.5 sm:px-4 border-r-2 border-slate-700 ${bBottomClass} text-center text-gray-400 text-[10px] sm:text-sm`}>
                             {isNextWeek && <div className="absolute -inset-[2px] pointer-events-none z-[20]" style={getWeekOverlayBorders(isNextWeek, true, true, 'mid', isTopBorderDay, isBottomBorderDay)} />}
                           </td>
-                          <td className={`relative py-1.5 sm:py-3 px-0.5 sm:px-2 ${isPresident ? 'border-r-2 border-slate-700' : ''} ${bBottomClass} text-center text-gray-400 text-[10px] sm:text-sm`}>
+                          <td className={`relative py-1.5 sm:py-3 px-1.5 sm:px-2 ${isPresident ? 'border-r-2 border-slate-700' : ''} ${bBottomClass} text-center text-gray-400 text-[10px] sm:text-sm`}>
                             {isNextWeek && <div className="absolute -inset-[2px] pointer-events-none z-[20]" style={getWeekOverlayBorders(isNextWeek, true, true, !isPresident ? 'last' : 'mid', isTopBorderDay, isBottomBorderDay)} />}
                           </td>
                           {isPresident && (
@@ -951,7 +968,7 @@
                           </td>
                         )}
                         
-                        <td className={`relative py-1.5 sm:py-3 px-1 sm:px-2 border-r-2 border-slate-700 ${bBottomClass} text-center align-middle`}>
+                        <td className={`relative py-1.5 sm:py-3 px-0.5 sm:px-2 border-r-2 border-slate-700 ${bBottomClass} text-center align-middle`}>
                           {isNextWeek && <div className="absolute -inset-[2px] pointer-events-none z-[20]" style={getWeekOverlayBorders(isNextWeek, isFirstRow, isLastRow, 'mid', isTopBorderDay, isBottomBorderDay)} />}
                           <div className="flex justify-center items-center w-full h-full relative z-10">
                             <span className={`text-[9px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1 rounded border whitespace-nowrap font-bold leading-none ${getTypeBadgeColor(event.type)}`}>
@@ -970,7 +987,7 @@
                           <span className="relative z-10">{event.title}</span>
                         </td>
                         
-                        <td className={`relative py-1.5 sm:py-3 px-0.5 sm:px-2 ${isPresident ? 'border-r-2 border-slate-700' : ''} ${bBottomClass} text-center font-bold break-words whitespace-pre-wrap text-[10px] sm:text-sm text-gray-600`}>
+                        <td className={`relative py-1.5 sm:py-3 px-1.5 sm:px-2 ${isPresident ? 'border-r-2 border-slate-700' : ''} ${bBottomClass} text-center font-bold break-words whitespace-pre-wrap text-[10px] sm:text-sm text-gray-600`}>
                           {isNextWeek && <div className="absolute -inset-[2px] pointer-events-none z-[20]" style={getWeekOverlayBorders(isNextWeek, isFirstRow, isLastRow, !isPresident ? 'last' : 'mid', isTopBorderDay, isBottomBorderDay)} />}
                           <span className="relative z-10">{event.note || ''}</span>
                         </td>
