@@ -105,13 +105,15 @@
       const firstNameRef = useRef(null);
       
       const [selectedDateForAdd, setSelectedDateForAdd] = useState(new Date());
-      const [newEventTitle, setNewEventTitle] = useState('');
-      const [newEventNote, setNewEventNote] = useState('');
       const [selectedPerson, setSelectedPerson] = useState(DEFAULT_MEMBERS[0].name);
       const [newEventHour, setNewEventHour] = useState('');
       const [newEventMinute, setNewEventMinute] = useState('');
       const [newEventType, setNewEventType] = useState('現場');
       const [editingEventId, setEditingEventId] = useState(null);
+
+      // --- 追加・修正: 現場名と備考を別々に複数管理する配列 ---
+      const [eventTitles, setEventTitles] = useState(['']);
+      const [eventNotes, setEventNotes] = useState(['']);
 
       // --- スマホブラウザに設定を記憶させるための処理 ---
       const [filterPerson, setFilterPerson] = useState(() => {
@@ -365,8 +367,8 @@
         setEditingEventId(null);
         setNewEventHour('');
         setNewEventMinute('');
-        setNewEventTitle('');
-        setNewEventNote('');
+        setEventTitles(['']); // 現場名を1件で初期化
+        setEventNotes(['']); // 備考を1件で初期化
         setNewEventType('現場');
         if (filterPerson !== '全員') {
           setSelectedPerson(filterPerson);
@@ -378,8 +380,6 @@
       const handleEditEventClick = (event, day) => {
         setSelectedDateForAdd(new Date(year, month, day));
         setEditingEventId(event.id);
-        setNewEventTitle(event.title || '');
-        setNewEventNote(event.note || '');
         setNewEventType(event.type || '現場');
         setSelectedPerson(event.person || DEFAULT_MEMBERS[0].name);
         
@@ -391,6 +391,13 @@
           setNewEventHour('');
           setNewEventMinute('');
         }
+
+        // --- 保存されているデータを復元して配列（入力欄）にセット ---
+        const titles = (event.title || '').split('\n');
+        setEventTitles(titles.length > 0 ? titles : ['']);
+
+        const notes = (event.note || '').split('\n');
+        setEventNotes(notes.length > 0 ? notes : ['']);
         
         setShowAddModal(true);
       };
@@ -411,9 +418,22 @@
             timeStr = `00:${newEventMinute.padStart(2, '0')}`;
           }
 
+          // --- 複数の入力項目を結合して保存用のデータを作る ---
+          let cleanTitles = [...eventTitles];
+          while (cleanTitles.length > 1 && cleanTitles[cleanTitles.length - 1].trim() === '') {
+            cleanTitles.pop();
+          }
+          const finalTitle = cleanTitles.join('\n');
+
+          let cleanNotes = [...eventNotes];
+          while (cleanNotes.length > 1 && cleanNotes[cleanNotes.length - 1].trim() === '') {
+            cleanNotes.pop();
+          }
+          const finalNote = cleanNotes.join('\n');
+
           const eventData = {
-            title: newEventTitle.trim(),
-            note: newEventNote.trim(),
+            title: finalTitle,
+            note: finalNote,
             dateStr: formatDateString(selectedDateForAdd.getFullYear(), selectedDateForAdd.getMonth(), selectedDateForAdd.getDate()),
             time: timeStr,
             type: newEventType,
@@ -430,8 +450,8 @@
           }
           
           setShowAddModal(false);
-          setNewEventTitle('');
-          setNewEventNote('');
+          setEventTitles(['']);
+          setEventNotes(['']);
           setNewEventHour('');
           setNewEventMinute('');
           setEditingEventId(null);
@@ -701,7 +721,6 @@
             {/* カレンダー本体 */}
             <div className="px-1 sm:px-4 pb-4 bg-white">
               <div className="w-full p-[2px]">
-                {/* コンテナの外枠borderを外し、各セルに外枠を設定する */}
                 <div className="grid grid-cols-7 text-center w-full relative">
                   {['日', '月', '火', '水', '木', '金', '土'].map((dow, i) => {
                     const bgClass = i === 0 ? 'bg-red-50' : i === 6 ? 'bg-blue-50' : 'bg-indigo-50';
@@ -782,66 +801,44 @@
                               }}
                               title={`${ev.person}: ${ev.type} ${ev.time} ${ev.title}`}
                             >
-                              {filterPerson === '全員' ? (
-                                <div className="flex flex-col w-full items-center px-0.5 pb-0.5">
-                                  <div className="flex items-center gap-0.5 w-full justify-center overflow-hidden">
-                                    {(() => {
-                                      const memInfo = getMemberInfo(ev.person);
-                                      const palette = PALETTES[memInfo.colorIndex % PALETTES.length] || PALETTES[7];
-                                      return (
-                                        <span className={`${palette.iconBg} text-white text-[8px] sm:text-[9px] font-bold px-0.5 sm:px-1 rounded-sm shrink-0 leading-none py-0.5 mt-0.5`}>
-                                          {memInfo.name.charAt(0)}
-                                        </span>
-                                      );
-                                    })()}
-                                    <span className={`font-bold text-[8px] sm:text-[10px] truncate leading-none py-0.5 mt-0.5 ${ev.type === '休み' ? 'text-red-600' : 'text-gray-800'}`}>
-                                      {ev.type}
-                                    </span>
-                                  </div>
-                                  {ev.time && ev.type !== '休み' && (
-                                    <span className="font-bold text-[8px] sm:text-[10px] text-black truncate leading-none mt-0.5 w-full text-center">
-                                      {ev.time}
-                                    </span>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="flex flex-col w-full items-center px-0.5">
-                                  {/* 1段目: アイコン+種別 (中央揃え) */}
-                                  <div className="flex flex-row items-center gap-0.5 w-full justify-center overflow-hidden">
-                                    {(() => {
-                                      const memInfo = getMemberInfo(ev.person);
-                                      const palette = PALETTES[memInfo.colorIndex % PALETTES.length] || PALETTES[7];
-                                      return (
-                                        <span className={`${palette.iconBg} text-white text-[8px] sm:text-[9px] font-bold px-0.5 sm:px-1 rounded-sm shrink-0 leading-none py-0.5`}>
-                                          {memInfo.name.charAt(0)}
-                                        </span>
-                                      );
-                                    })()}
-                                    <span className={`font-bold text-[8px] sm:text-[10px] truncate leading-none ${ev.type === '休み' ? 'text-red-600' : 'text-gray-800'}`}>
-                                      {ev.type}
-                                    </span>
-                                  </div>
-
-                                  {/* 2段目: 時間 (中央揃え) */}
-                                  {ev.time && ev.type !== '休み' && (
-                                    <span className="font-bold text-[8px] sm:text-[11px] text-black truncate leading-none mt-0.5 sm:mt-1 w-full text-center">
-                                      {ev.time}
-                                    </span>
-                                  )}
-
-                                  {/* 3段目: 現場名 (中央揃えで改行対応) */}
-                                  <span className={`text-[8px] sm:text-xs font-bold break-words leading-tight mt-0.5 sm:mt-1 w-full text-center whitespace-pre-wrap ${ev.type === '休み' || ev.title === '休み' ? 'text-red-600' : 'text-gray-800'}`}>
-                                    {ev.title}
+                              <div className="flex flex-col w-full items-center justify-center px-0.5">
+                                {/* 1段目: アイコン+種別 (中央揃え) */}
+                                <div className="flex flex-row items-center justify-center gap-0.5 w-full overflow-hidden">
+                                  {(() => {
+                                    const memInfo = getMemberInfo(ev.person);
+                                    const palette = PALETTES[memInfo.colorIndex % PALETTES.length] || PALETTES[7];
+                                    return (
+                                      <span className={`${palette.iconBg} text-white text-[8px] sm:text-[9px] font-bold px-0.5 sm:px-1 rounded-sm shrink-0 leading-none py-0.5 whitespace-nowrap`}>
+                                        {memInfo.name.charAt(0)}
+                                      </span>
+                                    );
+                                  })()}
+                                  <span className={`block font-bold text-[8px] sm:text-[10px] truncate leading-none py-0.5 ${ev.type === '休み' ? 'text-red-600' : 'text-gray-800'}`}>
+                                    {ev.type}
                                   </span>
-
-                                  {/* 4段目: 備考（中央揃えで改行対応） */}
-                                  {ev.note && (
-                                    <span className="text-[8px] sm:text-[10px] font-bold text-gray-500 break-words leading-tight mt-0.5 w-full text-center whitespace-pre-wrap">
-                                      {ev.note}
-                                    </span>
-                                  )}
                                 </div>
-                              )}
+
+                                {/* 2段目: 時間 (中央揃え) */}
+                                {ev.time && ev.type !== '休み' && (
+                                  <span className="block font-bold text-[8px] sm:text-[11px] text-black truncate leading-none mt-0.5 sm:mt-1 w-full text-center">
+                                    {ev.time}
+                                  </span>
+                                )}
+
+                                {/* 3段目: 現場名 (1行で「…」省略、中央揃え) */}
+                                {ev.title && (
+                                  <span className={`block text-[8px] sm:text-[10px] font-bold truncate leading-tight mt-0.5 sm:mt-1 w-full text-center ${ev.type === '休み' || ev.title === '休み' ? 'text-red-600' : 'text-gray-800'}`}>
+                                    {ev.title.replace(/\n/g, ' ')}
+                                  </span>
+                                )}
+
+                                {/* 4段目: 備考がある場合のみ「※備考」 (中央揃え) */}
+                                {ev.note && (
+                                  <span className="block text-[8px] sm:text-[10px] font-bold text-gray-500 truncate leading-tight mt-0.5 w-full text-center">
+                                    ※備考
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           ))}
                           {dayEvents.length > 3 && (
@@ -990,7 +987,7 @@
                             {event.title ? event.title.split('\n').map((line, idx, arr) => (
                               <React.Fragment key={idx}>
                                 <div className="flex-1 flex items-center justify-center px-1 sm:px-4 py-1.5 sm:py-3 min-h-[32px]">
-                                  <span className="whitespace-pre-wrap">{line}</span>
+                                  <span className="whitespace-pre-wrap">{event.type === '休み' ? '' : line}</span>
                                 </div>
                                 {idx < arr.length - 1 && <div className="w-full border-b border-gray-300"></div>}
                               </React.Fragment>
@@ -1036,9 +1033,9 @@
 
         {/* 予定の追加・編集モーダル */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="bg-[#124285] p-4 flex justify-between items-center text-white">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 my-auto">
+              <div className="bg-[#124285] p-4 flex justify-between items-center text-white sticky top-0 z-10">
                 <h3 className="font-bold text-lg">
                   {selectedDateForAdd.getMonth() + 1}月{selectedDateForAdd.getDate()}日の予定を{editingEventId ? '編集' : '追加'}
                 </h3>
@@ -1047,7 +1044,7 @@
                 </button>
               </div>
               
-              <form onSubmit={handleAddEvent} className="p-6 flex flex-col gap-4">
+              <form onSubmit={handleAddEvent} className="p-4 sm:p-6 flex flex-col gap-4">
                 {filterPerson === '全員' && (
                   <div>
                     <label className="block text-xs font-bold text-gray-600 mb-1">担当</label>
@@ -1071,9 +1068,9 @@
                       const selectedType = e.target.value;
                       setNewEventType(selectedType);
                       if (selectedType === '休み') {
-                        setNewEventTitle('休み');
-                      } else if (newEventTitle === '休み') {
-                        setNewEventTitle('');
+                        setEventTitles(['休み']);
+                      } else if (eventTitles.length === 1 && eventTitles[0] === '休み') {
+                        setEventTitles(['']);
                       }
                     }}
                     className="w-full h-11 border border-gray-300 rounded-lg px-3 focus:ring-2 focus:ring-[#124285] focus:border-[#124285] outline-none bg-white text-base"
@@ -1127,29 +1124,99 @@
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">現場名・内容</label>
-                  <textarea
-                    value={newEventTitle}
-                    onChange={(e) => setNewEventTitle(e.target.value)}
-                    placeholder="例：長沼現場&#10;（改行で2つ目を入力できます）"
-                    rows="2"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#124285] focus:border-[#124285] outline-none text-base resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">備考</label>
-                  <textarea
-                    value={newEventNote}
-                    onChange={(e) => setNewEventNote(e.target.value)}
-                    placeholder="例：変更の場合あり&#10;（改行で2つ目を入力できます）"
-                    rows="2"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#124285] focus:border-[#124285] outline-none text-base resize-none"
-                  />
+                {/* 現場名・内容の入力 */}
+                <div className="space-y-3">
+                  <label className="block text-xs font-bold text-gray-600 mb-1 border-b border-gray-200 pb-1">現場名・内容</label>
+                  
+                  {eventTitles.map((title, index) => (
+                    <div key={index} className="relative flex items-center gap-2">
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={title}
+                          onChange={(e) => {
+                            const newTitles = [...eventTitles];
+                            newTitles[index] = e.target.value;
+                            setEventTitles(newTitles);
+                          }}
+                          placeholder={index === 0 ? "例：長沼" : "追加の現場名・内容"}
+                          className="w-full h-11 border border-gray-300 rounded-lg px-3 focus:ring-2 focus:ring-[#124285] focus:border-[#124285] outline-none text-base"
+                        />
+                      </div>
+                      {eventTitles.length > 1 && (
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            const newTitles = [...eventTitles];
+                            newTitles.splice(index, 1);
+                            setEventTitles(newTitles);
+                          }}
+                          className="text-gray-400 hover:text-red-500 shrink-0 p-2 border border-transparent hover:bg-red-50 rounded transition"
+                          title="削除"
+                        >
+                          <X size={20} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <button
+                    type="button"
+                    onClick={() => setEventTitles([...eventTitles, ''])}
+                    className="w-full py-2.5 border-2 border-dashed border-[#124285]/30 text-[#124285] font-bold rounded-xl hover:bg-blue-50 transition flex items-center justify-center gap-2 mt-2"
+                  >
+                    <Plus size={18} />
+                    <span className="text-sm">現場名・内容を追加</span>
+                  </button>
                 </div>
                 
-                <div className="flex justify-between items-center mt-2">
+                {/* 備考の入力 */}
+                <div className="space-y-3 mt-2">
+                  <label className="block text-xs font-bold text-gray-600 mb-1 border-b border-gray-200 pb-1">備考</label>
+                  
+                  {eventNotes.map((note, index) => (
+                    <div key={index} className="relative flex items-center gap-2">
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={note}
+                          onChange={(e) => {
+                            const newNotes = [...eventNotes];
+                            newNotes[index] = e.target.value;
+                            setEventNotes(newNotes);
+                          }}
+                          placeholder={index === 0 ? "例：変更の場合あり" : "追加の備考"}
+                          className="w-full h-11 border border-gray-300 rounded-lg px-3 focus:ring-2 focus:ring-[#124285] focus:border-[#124285] outline-none text-base"
+                        />
+                      </div>
+                      {eventNotes.length > 1 && (
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            const newNotes = [...eventNotes];
+                            newNotes.splice(index, 1);
+                            setEventNotes(newNotes);
+                          }}
+                          className="text-gray-400 hover:text-red-500 shrink-0 p-2 border border-transparent hover:bg-red-50 rounded transition"
+                          title="削除"
+                        >
+                          <X size={20} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <button
+                    type="button"
+                    onClick={() => setEventNotes([...eventNotes, ''])}
+                    className="w-full py-2.5 border-2 border-dashed border-[#124285]/30 text-[#124285] font-bold rounded-xl hover:bg-blue-50 transition flex items-center justify-center gap-2 mt-2"
+                  >
+                    <Plus size={18} />
+                    <span className="text-sm">備考を追加</span>
+                  </button>
+                </div>
+                
+                <div className="flex justify-between items-center mt-4 border-t border-gray-200 pt-4">
                   <div>
                     {editingEventId && (
                       <button
@@ -1159,7 +1226,7 @@
                           setShowAddModal(false);
                         }}
                         className="px-3 py-2 text-red-600 font-bold rounded-lg hover:bg-red-50 transition flex items-center gap-1"
-                        title="この予定を削除"
+                        title="この予定全体を削除"
                       >
                         <Trash2 size={18} />
                         <span className="text-sm">削除</span>
@@ -1176,7 +1243,7 @@
                     </button>
                     <button
                       type="submit"
-                      className="px-4 sm:px-5 py-2 sm:py-2.5 bg-[#124285] text-white font-bold rounded-lg hover:bg-[#154374] transition text-sm sm:text-base"
+                      className="px-4 sm:px-5 py-2 sm:py-2.5 bg-[#124285] text-white font-bold rounded-lg hover:bg-[#154374] transition text-sm sm:text-base shadow-sm"
                     >
                       {editingEventId ? '更新する' : '追加する'}
                     </button>
