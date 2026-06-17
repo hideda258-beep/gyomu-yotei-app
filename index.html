@@ -8,9 +8,16 @@
   <!-- Tailwind CSS (CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- React & ReactDOM (CDN) -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- ESM Import Map for React & Babel JSX runtime -->
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime"
+      }
+    }
+  </script>
   
   <!-- Babel for parsing JSX (CDN) -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -30,12 +37,13 @@
 
   <!-- React & Firebase App Code -->
   <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useRef } from 'react';
+    import { createRoot } from 'react-dom/client';
+
     // Firebase ES Modules (CDN)
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
     import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
     import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-
-    const { useState, useEffect, useRef } = React;
 
     // --- Firebase Setup ---
     const firebaseConfig = {
@@ -772,7 +780,8 @@
                       <div 
                         key={day} 
                         onClick={() => {
-                          if (isPresident) {
+                          // 予定が0件で管理者の場合のみ追加モーダルを開き、それ以外は詳細リストへ移動
+                          if (isPresident && dayEvents.length === 0) {
                             handleAddEventClick(day);
                           } else {
                             scrollToDate(day);
@@ -782,7 +791,7 @@
                           ${isToday ? 'bg-[#FFF9C4]' : 'bg-white'}
                           cursor-pointer hover:bg-gray-50
                         `}
-                        title={isPresident ? "クリックして予定を追加" : "クリックして詳細リストへ移動"}
+                        title={isPresident && dayEvents.length === 0 ? "クリックして予定を追加" : "クリックして詳細リストへ移動"}
                       >
                         {isNextWeek && (
                           <div 
@@ -805,14 +814,11 @@
                               key={ev.id} 
                               className={`text-center w-full bg-white/80 rounded border border-gray-100 p-0.5 shadow-sm overflow-hidden cursor-pointer hover:bg-white transition-colors`}
                               onClick={(e) => { 
+                                // カレンダー上の予定カードクリック時は常に詳細リストへ移動
                                 e.stopPropagation(); 
-                                if (isPresident) {
-                                  handleEditEventClick(ev, day); 
-                                } else {
-                                  scrollToDate(day);
-                                }
+                                scrollToDate(day);
                               }}
-                              title={`${ev.person}: ${ev.type} ${ev.time} ${ev.title}`}
+                              title={`${ev.person}: ${ev.type} ${ev.time} ${ev.title}\n（クリックで詳細リストへ移動）`}
                             >
                               <div className="flex flex-col w-full items-center justify-center px-0.5">
                                 {/* 1段目: アイコン+種別 (中央揃え) */}
@@ -841,7 +847,7 @@
                                 {/* 3段目: 現場名 (1行で「…」省略、中央揃え) */}
                                 {ev.title && (
                                   <span className={`block text-[8px] sm:text-[10px] font-bold truncate leading-tight mt-0.5 sm:mt-1 w-full text-center ${ev.type === '休み' || ev.title === '休み' ? 'text-red-600' : 'text-gray-800'}`}>
-                                    {ev.title.replace(/\n/g, ' ')}
+                                    {ev.type === '休み' ? '休み' : ev.title.replace(/\n/g, ' ')}
                                   </span>
                                 )}
 
@@ -935,8 +941,9 @@
                             <td className={`relative py-1.5 sm:py-3 px-0.5 sm:px-2 ${bBottomClass} text-center`}>
                               {isNextWeek && <div className="absolute -inset-[2px] pointer-events-none z-[20]" style={getWeekOverlayBorders(isNextWeek, true, true, 'last', isTopBorderDay, isBottomBorderDay)} />}
                               <div className="flex justify-center items-center relative z-30">
-                                <button onClick={() => handleAddEventClick(day)} className="p-1 sm:p-1.5 text-gray-400 hover:text-[#1E5A99] hover:bg-blue-50 rounded transition" title="予定を追加">
-                                  <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                {/* 予定0件の日の追加ボタン（＋マーク） */}
+                                <button onClick={() => handleAddEventClick(day)} className="p-1 sm:p-1.5 text-[#1E5A99] hover:bg-blue-100 rounded transition border border-[#1E5A99]/30 bg-blue-50" title="予定を追加">
+                                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 </button>
                               </div>
                             </td>
@@ -956,10 +963,14 @@
                         {isFirstRow && (
                           <td 
                             rowSpan={dayEvents.length} 
-                            className={`relative py-1.5 sm:py-3 px-0.5 sm:px-2 border-r-2 border-slate-700 ${firstColBottomClass} text-center font-bold align-middle ${dayColorClass} text-[11px] sm:text-base ${isTodayObj && highlightDay !== day ? 'bg-[#FFF9C4]' : ''}`}
+                            className={`relative py-1.5 sm:py-3 px-0.5 sm:px-2 border-r-2 border-slate-700 ${firstColBottomClass} text-center font-bold align-top sm:align-middle ${dayColorClass} text-[11px] sm:text-base ${isTodayObj && highlightDay !== day ? 'bg-[#FFF9C4]' : ''}`}
                           >
                              {isNextWeek && <div className="absolute -inset-[2px] pointer-events-none z-[20]" style={getWeekOverlayBorders(isNextWeek, isFirstRow, isLastRow, 'first', isTopBorderDay, isBottomBorderDay, true)} />}
-                             {day} <br className="sm:hidden" /><span className="text-[9px] sm:text-xs">({dayOfWeekStr})</span>
+                             <div className="flex flex-col items-center justify-center h-full gap-1">
+                               <div>
+                                 {day} <br className="sm:hidden" /><span className="text-[9px] sm:text-xs">({dayOfWeekStr})</span>
+                               </div>
+                             </div>
                           </td>
                         )}
                         
@@ -997,10 +1008,14 @@
                         <td className={`relative p-0 border-r-2 border-slate-700 ${bBottomClass} text-center font-bold break-words text-[10px] sm:text-sm ${event.type === '休み' || event.title === '休み' ? 'text-red-600' : 'text-gray-800'}`}>
                           {isNextWeek && <div className="absolute -inset-[2px] pointer-events-none z-[20]" style={getWeekOverlayBorders(isNextWeek, isFirstRow, isLastRow, 'mid', isTopBorderDay, isBottomBorderDay)} />}
                           <div className="relative z-10 flex flex-col h-full w-full justify-center">
-                            {event.title ? event.title.split('\n').map((line, idx, arr) => (
+                            {event.type === '休み' ? (
+                              <div className="flex-1 flex items-center justify-center px-1 sm:px-4 py-1.5 sm:py-3 min-h-[32px]">
+                                <span className="whitespace-pre-wrap text-red-600">休み</span>
+                              </div>
+                            ) : event.title ? event.title.split('\n').map((line, idx, arr) => (
                               <React.Fragment key={idx}>
                                 <div className="flex-1 flex items-center justify-center px-1 sm:px-4 py-1.5 sm:py-3 min-h-[32px]">
-                                  <span className="whitespace-pre-wrap">{event.type === '休み' ? '' : line}</span>
+                                  <span className="whitespace-pre-wrap">{line}</span>
                                 </div>
                                 {idx < arr.length - 1 && <div className="w-full border-b border-gray-300"></div>}
                               </React.Fragment>
@@ -1026,7 +1041,8 @@
                           <td className={`relative py-1.5 sm:py-3 px-0.5 sm:px-2 ${bBottomClass} text-center`}>
                             {isNextWeek && <div className="absolute -inset-[2px] pointer-events-none z-[20]" style={getWeekOverlayBorders(isNextWeek, isFirstRow, isLastRow, 'last', isTopBorderDay, isBottomBorderDay)} />}
                             <div className="flex justify-center items-center relative z-30">
-                              <button onClick={() => handleEditEventClick(event, day)} className="p-1 sm:p-1.5 text-gray-400 hover:text-[#1E5A99] hover:bg-blue-50 rounded transition" title="予定を編集">
+                              {/* 既存の予定に対する編集ボタン（鉛筆マーク） */}
+                              <button onClick={() => handleEditEventClick(event, day)} className="p-1 sm:p-1.5 text-gray-400 hover:text-[#1E5A99] hover:bg-blue-50 rounded transition" title="この予定を編集">
                                 <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               </button>
                             </div>
@@ -1461,7 +1477,7 @@
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
+    const root = createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
 </body>
