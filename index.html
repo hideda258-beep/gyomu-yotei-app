@@ -301,7 +301,47 @@
       const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
       const firstDayOfMonth = new Date(year, month, 1).getDay();
-      const calendarDays = Array(firstDayOfMonth).fill(null).concat(daysArray);
+
+      // 前月の日付を作る
+      const prevMonthDays = getDaysInMonth(year, month - 1);
+      const prevMonthCells = Array.from({ length: firstDayOfMonth }, (_, i) => {
+        const day = prevMonthDays - firstDayOfMonth + i + 1;
+        const date = new Date(year, month - 1, day);
+        return {
+          day,
+          year: date.getFullYear(),
+          month: date.getMonth(),
+          isCurrentMonth: false
+        };
+      });
+
+      // 今月の日付を作る
+      const currentMonthCells = daysArray.map(day => ({
+        day,
+        year,
+        month,
+        isCurrentMonth: true
+      }));
+
+      // 翌月の日付を作る
+      const totalCells = prevMonthCells.length + currentMonthCells.length;
+      const nextMonthCellCount = (7 - (totalCells % 7)) % 7;
+      const nextMonthCells = Array.from({ length: nextMonthCellCount }, (_, i) => {
+        const day = i + 1;
+        const date = new Date(year, month + 1, day);
+        return {
+          day,
+          year: date.getFullYear(),
+          month: date.getMonth(),
+          isCurrentMonth: false
+        };
+      });
+
+      const calendarDays = [
+        ...prevMonthCells,
+        ...currentMonthCells,
+        ...nextMonthCells
+      ];
 
       const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
       const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
@@ -544,6 +584,13 @@
           .sort((a, b) => (a.time || '24:00').localeCompare(b.time || '24:00'));
       };
 
+      const getEventsForCalendarDate = (cell) => {
+        const checkDateStr = formatDateString(cell.year, cell.month, cell.day);
+        return filteredEvents
+          .filter(e => e.dateStr === checkDateStr)
+          .sort((a, b) => (a.time || '24:00').localeCompare(b.time || '24:00'));
+      };
+
       const getDayColor = (year, month, day) => {
         const dayOfWeek = new Date(year, month, day).getDay();
         if (dayOfWeek === 0) return 'text-red-600 bg-red-50/50';
@@ -758,29 +805,33 @@
                     );
                   })}
                   
-                  {calendarDays.map((day, index) => {
+                  {calendarDays.map((cell, index) => {
                     const colIndex = index % 7;
+                    const { day, year: cellYear, month: cellMonth, isCurrentMonth } = cell;
                     
                     const bLeftClass = colIndex === 0 ? 'border-l-2 border-slate-700' : '';
                     const bRightClass = 'border-r-2 border-slate-700';
                     const bBottomClass = 'border-b-2 border-slate-700';
 
-                    if (day === null) {
-                      return <div key={`empty-${index}`} className={`min-h-[80px] sm:min-h-[120px] bg-gray-50 ${bLeftClass} ${bRightClass} ${bBottomClass}`}></div>;
-                    }
+                    const dayEvents = getEventsForCalendarDate(cell);
+                    const dayOfWeek = new Date(cellYear, cellMonth, day).getDay();
+                    const isToday = new Date().getDate() === day && new Date().getMonth() === cellMonth && new Date().getFullYear() === cellYear;
                     
-                    const dayEvents = getEventsForDay(day);
-                    const dayOfWeek = new Date(year, month, day).getDay();
-                    const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
-                    
-                    const currentRowDate = new Date(year, month, day);
+                    const currentRowDate = new Date(cellYear, cellMonth, day);
                     const isNextWeek = currentRowDate >= nwStart && currentRowDate <= nwEnd;
                     
+                    const cellDaysInMonth = new Date(cellYear, cellMonth + 1, 0).getDate();
+                    const isTopBorderDay = isNextWeek;
+                    const isBottomBorderDay = isNextWeek;
+
                     return (
                       <div 
-                        key={day} 
+                        key={`${cellYear}-${cellMonth}-${day}`} 
                         onClick={() => {
-                          // 予定が0件で管理者の場合のみ追加モーダルを開き、それ以外は詳細リストへ移動
+                          if (!isCurrentMonth) {
+                            setCurrentDate(new Date(cellYear, cellMonth, 1));
+                            return;
+                          }
                           if (isPresident && dayEvents.length === 0) {
                             handleAddEventClick(day);
                           } else {
@@ -788,40 +839,37 @@
                           }
                         }}
                         className={`min-w-0 min-h-[80px] sm:min-h-[120px] p-0.5 sm:p-1 flex flex-col items-center justify-start transition-colors relative ${bLeftClass} ${bRightClass} ${bBottomClass}
-                          ${isToday ? 'bg-[#FFF9C4]' : 'bg-white'}
-                          cursor-pointer hover:bg-gray-50
+                          ${isToday ? 'bg-[#FFF9C4]' : (isCurrentMonth ? 'bg-white' : 'bg-gray-50')}
+                          cursor-pointer hover:bg-gray-100
                         `}
-                        title={isPresident && dayEvents.length === 0 ? "クリックして予定を追加" : "クリックして詳細リストへ移動"}
+                        title={!isCurrentMonth ? "クリックして月を移動" : (isPresident && dayEvents.length === 0 ? "クリックして予定を追加" : "クリックして詳細リストへ移動")}
                       >
                         {isNextWeek && (
                           <div 
                             className={`absolute -inset-[2px] pointer-events-none z-[20]`}
-                            style={{
-                              borderTop: '5px solid #f97316',
-                              borderBottom: '5px solid #f97316',
-                              borderLeft: (dayOfWeek === 0 || day === 1) ? '5px solid #f97316' : 'none',
-                              borderRight: (dayOfWeek === 6 || day === daysInMonth) ? '5px solid #f97316' : 'none',
-                            }}
+                            style={getWeekOverlayBorders(isNextWeek, true, true, colIndex === 0 ? 'first' : (colIndex === 6 ? 'last' : 'mid'), isTopBorderDay, isBottomBorderDay, true)}
                           />
                         )}
-                        <span className={`relative z-[30] text-xs sm:text-lg font-bold mb-0.5 sm:mb-1 ${dayOfWeek === 0 ? 'text-red-600' : dayOfWeek === 6 ? 'text-[#124285]' : 'text-black'}`}>
-                          {day}
+                        <span className={`relative z-[30] text-xs sm:text-lg font-bold mb-0.5 sm:mb-1 ${!isCurrentMonth ? 'text-gray-400' : (dayOfWeek === 0 ? 'text-red-600' : dayOfWeek === 6 ? 'text-[#124285]' : 'text-black')}`}>
+                          {!isCurrentMonth ? `${cellMonth + 1}/${day}` : day}
                         </span>
                         
                         <div className="relative z-[30] flex-1 flex flex-col gap-0.5 sm:gap-1 w-full px-1 pb-1.5 sm:px-1.5 sm:pb-1.5 items-center justify-start overflow-hidden">
                           {dayEvents.slice(0, 3).map(ev => (
                             <div 
                               key={ev.id} 
-                              className={`text-center w-full bg-white/80 rounded border border-gray-100 p-0.5 shadow-sm overflow-hidden cursor-pointer hover:bg-white transition-colors`}
+                              className={`text-center w-full bg-white/80 rounded border ${!isCurrentMonth ? 'border-gray-200' : 'border-gray-100'} p-0.5 shadow-sm overflow-hidden cursor-pointer hover:bg-white transition-colors`}
                               onClick={(e) => { 
-                                // カレンダー上の予定カードクリック時は常に詳細リストへ移動
                                 e.stopPropagation(); 
+                                if (!isCurrentMonth) {
+                                  setCurrentDate(new Date(cellYear, cellMonth, 1));
+                                  return;
+                                }
                                 scrollToDate(day);
                               }}
-                              title={`${ev.person}: ${ev.type} ${ev.time} ${ev.title}\n（クリックで詳細リストへ移動）`}
+                              title={!isCurrentMonth ? "クリックして月を移動" : `${ev.person}: ${ev.type} ${ev.time} ${ev.title}\n（クリックで詳細リストへ移動）`}
                             >
                               <div className="flex flex-col w-full items-center justify-center px-0.5">
-                                {/* 1段目: アイコン+種別 (中央揃え) */}
                                 <div className="flex flex-row items-center justify-center gap-0.5 w-full overflow-hidden">
                                   {(() => {
                                     const memInfo = getMemberInfo(ev.person);
@@ -837,21 +885,18 @@
                                   </span>
                                 </div>
 
-                                {/* 2段目: 時間 (中央揃え) */}
                                 {ev.time && ev.type !== '休み' && (
                                   <span className="block font-bold text-[8px] sm:text-[11px] text-black truncate leading-none mt-0.5 sm:mt-1 w-full text-center">
                                     {ev.time}
                                   </span>
                                 )}
 
-                                {/* 3段目: 現場名 (1行で「…」省略、中央揃え) */}
                                 {ev.title && (
                                   <span className={`block text-[8px] sm:text-[10px] font-bold truncate leading-tight mt-0.5 sm:mt-1 w-full text-center ${ev.type === '休み' || ev.title === '休み' ? 'text-red-600' : 'text-gray-800'}`}>
                                     {ev.type === '休み' ? '休み' : ev.title.replace(/\n/g, ' ')}
                                   </span>
                                 )}
 
-                                {/* 4段目: 備考がある場合のみ「※備考」 (中央揃え) */}
                                 {ev.note && (
                                   <span className="block text-[8px] sm:text-[10px] font-bold text-gray-500 truncate leading-tight mt-0.5 w-full text-center">
                                     ※備考
@@ -867,11 +912,11 @@
                           )}
                         </div>
                       </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
 
           {/* 詳細リスト表示 */}
           <div className="px-1 sm:px-4 pb-8 bg-white">
