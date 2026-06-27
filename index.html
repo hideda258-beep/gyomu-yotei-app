@@ -345,6 +345,16 @@
 
       const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
       const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+      const getMoveMonthLabel = (offset) => {
+  　　　 const d = new Date(year, month + offset, 1);
+        const label = `${d.getMonth() + 1}月`;
+
+        if (d.getFullYear() !== year) {
+          return `${d.getFullYear()}年 ${label}`;
+        }
+
+        return label;
+      };
 
       const formatDateString = (y, m, d) => {
         const padM = String(m + 1).padStart(2, '0');
@@ -772,19 +782,40 @@
             </div>
 
             {/* 月切り替え */}
-            <div className="py-4 flex justify-center items-center bg-white">
-              <div className="flex items-center justify-center gap-4 sm:gap-8 w-full">
-                <button onClick={prevMonth} className="p-2 text-gray-400 hover:text-gray-700 transition hover:bg-gray-50 rounded-full">
-                  <ChevronLeft size={24} />
-                </button>
-                <h2 className="text-2xl sm:text-3xl font-bold text-[#124285] tracking-widest min-w-[140px] sm:min-w-[180px] text-center">
-                  {year}年 {month + 1}月
-                </h2>
-                <button onClick={nextMonth} className="p-2 text-gray-400 hover:text-gray-700 transition hover:bg-gray-50 rounded-full">
-                  <ChevronRight size={24} />
-                </button>
-              </div>
-            </div>
+　　　　　　　<div className="py-4 flex justify-center items-center bg-white">
+             <div className="flex items-center justify-center gap-2 sm:gap-5 w-full px-1">
+
+               {/* 前月 */}
+               <button
+                 onClick={prevMonth}
+                 className="flex items-center gap-1 px-1 sm:px-3 py-2 text-gray-500 hover:text-[#124285] hover:bg-gray-50 rounded-full transition"
+                 title={`${getMoveMonthLabel(-1)}へ移動`}
+               >
+                 <span className="text-sm sm:text-lg font-bold whitespace-nowrap">
+                   {getMoveMonthLabel(-1)}
+                 </span>
+                 <ChevronLeft size={20} />
+               </button>
+
+               {/* 今月 */}
+               <h2 className="text-xl sm:text-3xl font-bold text-[#124285] tracking-widest min-w-[150px] sm:min-w-[220px] text-center bg-[#E4E9F2] px-4 sm:px-10 py-2 rounded-full shadow-sm whitespace-nowrap">
+                 {year}年 {month + 1}月
+               </h2>
+
+              {/* 次月 */}
+              <button
+                onClick={nextMonth}
+                className="flex items-center gap-1 px-1 sm:px-3 py-2 text-gray-500 hover:text-[#124285] hover:bg-gray-50 rounded-full transition"
+                title={`${getMoveMonthLabel(1)}へ移動`}
+               >
+                <ChevronRight size={20} />
+                <span className="text-sm sm:text-lg font-bold whitespace-nowrap">
+                  {getMoveMonthLabel(1)}
+                </span>
+              </button>
+
+             </div>
+           </div>
 
             {/* カレンダー本体 */}
             <div className="px-1 sm:px-4 pb-4 bg-white">
@@ -839,7 +870,7 @@
                           }
                         }}
                         className={`min-w-0 min-h-[80px] sm:min-h-[120px] p-0.5 sm:p-1 flex flex-col items-center justify-start transition-colors relative ${bLeftClass} ${bRightClass} ${bBottomClass}
-                          ${isToday ? 'bg-[#FFF9C4]' : (isCurrentMonth ? 'bg-white' : 'bg-gray-50')}
+                          ${isToday ? 'bg-[#FFF9C4]' : (isCurrentMonth ? 'bg-white' : 'bg-gray-100')}
                           cursor-pointer hover:bg-gray-100
                         `}
                         title={!isCurrentMonth ? "クリックして月を移動" : (isPresident && dayEvents.length === 0 ? "クリックして予定を追加" : "クリックして詳細リストへ移動")}
